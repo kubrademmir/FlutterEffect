@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlutterEffect</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body {
+        background:
+          radial-gradient(circle at 15% 10%, rgba(34, 211, 238, 0.35) 0%, transparent 35%),
+          radial-gradient(circle at 80% 15%, rgba(16, 185, 129, 0.28) 0%, transparent 38%),
+          radial-gradient(circle at 60% 90%, rgba(59, 130, 246, 0.18) 0%, transparent 40%),
+          linear-gradient(135deg, rgba(240, 253, 250, 0.65), rgba(239, 246, 255, 0.65));
+        color: rgb(15 23 42);
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 14px 55px rgba(2, 6, 23, 0.12);
+      }
+      .butterfly {
+        animation: flutter var(--flutter-speed, 1.6s) ease-in-out infinite;
+        transform-origin: center;
+      }
+      @keyframes flutter {
+        0% { transform: translateY(0) rotate(-4deg) scale(1); }
+        40% { transform: translateY(-4px) rotate(6deg) scale(1.03); }
+        100% { transform: translateY(0) rotate(-4deg) scale(1); }
+      }
+
+      .particle-layer {
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: 50;
+        overflow: hidden;
+      }
+
+      .droplet {
+        position: absolute;
+        width: 10px;
+        height: 14px;
+        border-radius: 999px 999px 999px 999px;
+        background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.9), rgba(56, 189, 248, 0.9) 55%, rgba(59, 130, 246, 0.7));
+        box-shadow: 0 6px 18px rgba(56, 189, 248, 0.25);
+        transform: translate3d(0, 0, 0) rotate(12deg);
+        opacity: 0;
+        animation: dropletFly 900ms ease-out forwards;
+        animation-delay: var(--delay, 0ms);
+      }
+
+      @keyframes dropletFly {
+        0% {
+          opacity: 0;
+          transform: translate3d(0, 0, 0) rotate(12deg) scale(0.85);
+        }
+        12% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translate3d(var(--dx, 120px), var(--dy, 60px), 0) rotate(22deg) scale(1);
+        }
+      }
+
+      .glass-dark {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 14px 55px rgba(2, 6, 23, 0.18);
+      }
+
+      .risk-bar {
+        background: linear-gradient(90deg, #22c55e 0%, #facc15 35%, #fb923c 65%, #ef4444 100%);
+      }
+      .risk-pointer {
+        transform: translateX(-50%);
+        transition: left 600ms ease;
+      }
+
+      .world-map {
+        width: 100%;
+        height: 180px;
+      }
+      .continent {
+        fill: rgba(15, 23, 42, 0.18);
+        stroke: rgba(15, 23, 42, 0.22);
+        stroke-width: 1;
+      }
+      .heat {
+        fill: rgba(239, 68, 68, 0.45);
+        filter: blur(0.2px);
+      }
+      .origin {
+        fill: rgba(56, 189, 248, 0.95);
+        stroke: rgba(255, 255, 255, 0.9);
+        stroke-width: 1.5;
+      }
+    </style>
+  </head>
+  <body class="min-h-screen">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <nav class="glass rounded-2xl px-4 sm:px-6 py-4 flex items-center justify-between sticky top-4 z-40">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <span class="text-xl">🦋</span>
+          </div>
+          <div class="leading-tight">
+            <div class="text-lg font-bold text-slate-900">FlutterEffect</div>
+          </div>
+        </div>
+
+        <div class="hidden sm:flex items-center gap-4 text-sm">
+          <a href="#how" class="text-slate-700 hover:text-slate-900 transition">Nasıl Çalışır?</a>
+          <a href="#why" class="text-slate-700 hover:text-slate-900 transition">Neden Kelebek Etkisi?</a>
+        </div>
+      </nav>
+
+      <section class="glass rounded-3xl p-6 sm:p-8">
+        <div class="grid md:grid-cols-2 gap-6 items-center">
+          <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-slate-200 text-xs text-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Global Su Mirası • Simülasyon
+          </div>
+          <h1 class="mt-4 text-3xl sm:text-5xl font-extrabold tracking-tight">
+            <span class="bg-gradient-to-r from-cyan-600 via-sky-600 to-emerald-600 bg-clip-text text-transparent">
+              Small wings, big oceans.
+            </span>
+          </h1>
+          <p class="mt-4 text-slate-700 leading-relaxed">
+            Senin küçük seçimlerin, dünyanın öbür ucundaki ekosistemleri canlandırıyor.
+            Hadi, bugün bir kelebek etkisi yarat!
+          </p>
+          </div>
+
+          <div class="relative">
+            <div class="absolute -inset-2 rounded-3xl bg-gradient-to-br from-cyan-400/25 to-emerald-400/20 blur-2xl"></div>
+            <div class="glass rounded-3xl p-5 relative overflow-hidden">
+              <div class="text-sm text-slate-600 font-medium">Kapak Görseli (SVG)</div>
+              <div class="mt-3">
+                <!-- A single water drop falling on the Earth (SVG) -->
+                <svg viewBox="0 0 520 260" class="w-full h-auto" role="img" aria-label="Dünya üzerine düşen su damlası">
+                  <defs>
+                    <radialGradient id="gEarth" cx="35%" cy="30%" r="70%">
+                      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.95"/>
+                      <stop offset="60%" stop-color="#1d4ed8" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#0b1220" stop-opacity="0.95"/>
+                    </radialGradient>
+                    <linearGradient id="gLand" x1="0" x2="1">
+                      <stop offset="0%" stop-color="#34d399" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#22c55e" stop-opacity="0.75"/>
+                    </linearGradient>
+                    <linearGradient id="gDrop" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="#e0f2fe" stop-opacity="0.95"/>
+                      <stop offset="45%" stop-color="#38bdf8" stop-opacity="0.9"/>
+                      <stop offset="100%" stop-color="#2563eb" stop-opacity="0.9"/>
+                    </linearGradient>
+                    <filter id="fGlow" x="-30%" y="-30%" width="160%" height="160%">
+                      <feGaussianBlur stdDeviation="8" result="blur"/>
+                      <feColorMatrix in="blur" type="matrix"
+                        values="1 0 0 0 0
+                                0 1 0 0 0
+                                0 0 1 0 0
+                                0 0 0 0.35 0" result="glow"/>
+                      <feMerge>
+                        <feMergeNode in="glow"/>
+                        <feMergeNode in="SourceGraphic"/>
+                      </feMerge>
+                    </filter>
+                  </defs>
+
+                  <!-- Drop -->
+                  <g filter="url(#fGlow)">
+                    <path d="M260 22 C240 60 214 92 214 126 C214 160 235 185 260 185 C285 185 306 160 306 126 C306 92 280 60 260 22 Z"
+                          fill="url(#gDrop)" opacity="0.95">
+                      <animateTransform attributeName="transform" type="translate"
+                        values="0,-8;0,0;0,-6;0,0" dur="3.2s" repeatCount="indefinite"/>
+                    </path>
+                    <circle cx="245" cy="98" r="10" fill="#ffffff" opacity="0.35"/>
+                  </g>
+
+                  <!-- Earth -->
+                  <g>
+                    <circle cx="260" cy="185" r="70" fill="url(#gEarth)" opacity="0.98"/>
+                    <!-- Land blobs -->
+                    <path d="M232 167 C210 160 206 140 222 135 C244 128 252 145 248 156 C244 165 242 172 232 167 Z" fill="url(#gLand)" opacity="0.9"/>
+                    <path d="M286 198 C300 188 320 190 327 206 C332 218 318 232 304 229 C294 227 274 210 286 198 Z" fill="url(#gLand)" opacity="0.78"/>
+                    <path d="M260 223 C246 222 242 210 252 204 C266 195 280 206 278 216 C276 223 270 224 260 223 Z" fill="url(#gLand)" opacity="0.7"/>
+                    <!-- ripple -->
+                    <circle cx="260" cy="185" r="78" fill="none" stroke="#38bdf8" stroke-opacity="0.35" stroke-width="2">
+                      <animate attributeName="r" values="72;84;72" dur="3.2s" repeatCount="indefinite"/>
+                      <animate attributeName="stroke-opacity" values="0.35;0.15;0.35" dur="3.2s" repeatCount="indefinite"/>
+                    </circle>
+                  </g>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="glass rounded-3xl p-6 sm:p-7" id="how">
+        <h2 class="text-xl sm:text-2xl font-semibold text-slate-900">
+          Senin Seçimin, Dünyanın Öbür Ucunda Ne Değiştiriyor?
+        </h2>
+        <p id="butterflyNarrative" class="text-slate-600 mt-2">
+          Bir ürün arat ve “Kelebek Etkisi” anlatısının nasıl değiştiğini gör.
+        </p>
+
+        <form id="searchForm" class="mt-4 grid sm:grid-cols-[1fr_auto] gap-2">
+          <input
+            id="query"
+            class="px-4 py-3 rounded-full bg-white/60 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/40"
+            placeholder="Örn: 1 kg dana eti, 1 fincan kahve, kot pantolon"
+            autocomplete="off"
+          />
+          <button
+            id="searchBtn"
+            type="submit"
+            class="px-5 py-3 rounded-full bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 text-white hover:from-emerald-500 hover:to-cyan-500 transition shadow-lg shadow-emerald-500/20"
+          >
+            Ara
+          </button>
+        </form>
+
+        <div id="resultCard" class="mt-4 glass rounded-3xl p-5 hidden">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div id="resultTitle" class="text-lg font-semibold text-slate-900">-</div>
+              <div id="resultMeta" class="text-sm text-slate-600 mt-1">-</div>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <div class="text-sm text-slate-700 font-medium mb-2">Risk Cetveli</div>
+            <div class="relative">
+              <div class="risk-bar h-3 rounded-full"></div>
+              <div id="riskPointer" class="risk-pointer absolute -top-2 left-[10%]">
+                <div class="w-4 h-4 rounded-full bg-white border border-slate-300 shadow"></div>
+                <div class="w-0 h-0 mx-auto border-l-[6px] border-r-[6px] border-t-[10px] border-l-transparent border-r-transparent border-t-slate-700/60"></div>
+              </div>
+            </div>
+            <div class="flex justify-between text-xs text-slate-600 mt-2">
+              <span>İyi</span><span>Orta</span><span>Kötü</span><span>Kritik</span>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-2">
+            <button
+              id="alternativeBtn"
+              type="button"
+              class="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:bg-white/80 transition text-sm text-slate-900 shadow-sm"
+            >
+              Düşük Su Ayak İzli Alternatif Seç (Simülasyon)
+            </button>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-2 mt-4">
+          <button
+            id="mockSearchBtn"
+            type="button"
+            class="px-4 py-2 rounded-full bg-white/60 border border-slate-200 hover:bg-white/80 transition text-sm text-slate-900 shadow-sm"
+          >
+            Ürün Ara (Simülasyon)
+          </button>
+          <button
+            id="mockAlternativeBtn"
+            type="button"
+            class="px-4 py-2 rounded-full bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 text-white hover:from-emerald-500 hover:to-cyan-500 transition text-sm shadow-lg shadow-emerald-500/20"
+          >
+            Düşük Su Alternatifi Seç (Simülasyon)
+          </button>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-4 mt-4">
+          <div class="glass rounded-3xl p-6 flex items-center justify-center">
+            <div class="text-center">
+              <div class="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-br from-cyan-500/15 to-emerald-500/15 border border-slate-200 shadow-sm">
+                <div id="butterfly" class="text-5xl butterfly select-none">🦋</div>
+              </div>
+              <div class="text-slate-700 mt-3 text-sm">
+                Küçük bir seçim, büyük bir dalga yaratabilir.
+              </div>
+            </div>
+          </div>
+
+          <div id="impactCard" class="glass rounded-3xl p-6">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-slate-900">Etki Alanı</h3>
+              <span class="text-xs px-2 py-1 rounded-full border border-slate-200 bg-white/50 text-slate-700">
+                Simülasyon
+              </span>
+            </div>
+
+            <div class="mt-4 rounded-3xl border border-slate-200 bg-white/40 overflow-hidden">
+              <div class="px-4 py-3 text-sm text-slate-700 border-b border-slate-200/60">
+                Dünya Haritası ve Su Stresi (Simülasyon)
+              </div>
+              <div class="p-3">
+                <!-- Simple world map (SVG) + origin highlight + heat spots -->
+                <svg id="worldMap" viewBox="0 0 520 220" class="world-map" role="img" aria-label="Dünya haritası su stresi görselleştirmesi">
+                  <!-- Continent blobs (stylized) -->
+                  <path class="continent" d="M60,90 C60,60 90,45 120,55 C150,65 165,85 155,105 C145,125 115,135 90,125 C70,115 60,105 60,90 Z"/>
+                  <path class="continent" d="M180,70 C205,50 240,55 265,70 C285,82 280,105 260,120 C240,135 205,132 190,112 C175,95 165,85 180,70 Z"/>
+                  <path class="continent" d="M300,85 C320,70 350,65 380,75 C405,85 420,110 405,130 C390,150 350,155 325,140 C300,125 285,100 300,85 Z"/>
+                  <path class="continent" d="M410,65 C430,50 460,55 475,75 C490,95 480,120 455,125 C430,130 405,110 410,90 C412,80 402,72 410,65 Z"/>
+                  <path class="continent" d="M360,165 C375,150 405,150 420,165 C435,180 425,200 405,202 C385,204 345,190 360,165 Z"/>
+
+                  <!-- Heat spots -->
+                  <g id="heatLayer">
+                    <circle class="heat" cx="330" cy="105" r="18"/>
+                    <circle class="heat" cx="270" cy="120" r="14" opacity="0.35"/>
+                    <circle class="heat" cx="420" cy="120" r="16" opacity="0.28"/>
+                  </g>
+
+                  <!-- Origin marker (moves with JS) -->
+                  <circle id="originDot" class="origin" cx="260" cy="105" r="7"/>
+                </svg>
+
+                <div class="mt-3 rounded-2xl border border-slate-200 bg-white/50 overflow-hidden">
+                  <div class="px-3 py-2 text-xs text-slate-700 border-b border-slate-200/70">
+                    Sanal Su Kuyusu / Göl
+                  </div>
+                  <div class="relative h-24">
+                    <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/10 to-emerald-500/10"></div>
+                    <div
+                      id="waterLevel"
+                      class="absolute bottom-0 left-0 right-0 h-[45%] bg-gradient-to-t from-cyan-500/70 to-sky-400/25 transition-all duration-[1400ms] ease-out"
+                    ></div>
+                    <div id="waterLabel" class="absolute bottom-2 right-3 text-xs text-slate-700">Seviye: %45</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-1">
+              <div class="text-slate-800">
+                Tasarruf edilen su: <span id="savedLiters" class="font-semibold text-slate-900">0 Litre</span>
+              </div>
+              <div class="text-slate-600 text-sm">
+                Etkilenen Bölge: <span id="impactedRegion" class="text-slate-800">Simüle Ediliyor...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="glass rounded-3xl p-6 sm:p-7" id="why">
+        <h2 class="text-lg font-semibold text-slate-900">Neden Kelebek Etkisi?</h2>
+        <p class="text-slate-700 mt-2 leading-relaxed">
+          Bir ürün seçimi; su ayak izi, üretim zinciri ve tüketim alışkanlıkları üzerinden zincirleme etki yaratır.
+          FlutterEffect bunu görselleştirerek, küçük adımların nasıl büyük okyanuslara dönüştüğünü hissettirir.
+        </p>
+      </section>
+    </div>
+
+    <div id="particleLayer" class="particle-layer" aria-hidden="true"></div>
+
+    <script>
+      // Bu sayfa "Kelebek Etkisi" bölümünü tamamen mock/simülasyon olarak canlandırır.
+      // Harici API yok; sadece JS + CSS animasyonları.
+
+      const butterflyEl = document.getElementById("butterfly");
+      const impactCardEl = document.getElementById("impactCard");
+      const waterLevelEl = document.getElementById("waterLevel");
+      const waterLabelEl = document.getElementById("waterLabel");
+      const savedLitersEl = document.getElementById("savedLiters");
+      const impactedRegionEl = document.getElementById("impactedRegion");
+      const particleLayerEl = document.getElementById("particleLayer");
+      const mockSearchBtn = document.getElementById("mockSearchBtn");
+      const mockAlternativeBtn = document.getElementById("mockAlternativeBtn");
+      const butterflyNarrativeEl = document.getElementById("butterflyNarrative");
+      const searchFormEl = document.getElementById("searchForm");
+      const queryInputEl = document.getElementById("query");
+      const resultCardEl = document.getElementById("resultCard");
+      const resultTitleEl = document.getElementById("resultTitle");
+      const resultMetaEl = document.getElementById("resultMeta");
+      const riskPointerEl = document.getElementById("riskPointer");
+      const alternativeBtnEl = document.getElementById("alternativeBtn");
+      const originDotEl = document.getElementById("originDot");
+      const heatLayerEl = document.getElementById("heatLayer");
+
+      let flutterSlow = 1.6;
+      let flutterFast = 0.65;
+      let currentWaterPercent = 45;
+      let resetTimer = null;
+      let lastSeenProduct = null;
+      let lastSeenLiters = null;
+
+      function setFlutterSpeed(seconds) {
+        // CSS değişkeni: .butterfly { animation-duration: var(--flutter-speed) }
+        document.documentElement.style.setProperty("--flutter-speed", `${seconds}s`);
+      }
+
+      function onSearchViewed() {
+        // 1) Ürün araması yapılıp su ayak izi görülünce kelebek hızlansın
+        setFlutterSpeed(flutterFast);
+        scheduleFlutterReset();
+      }
+
+      function scheduleFlutterReset() {
+        if (resetTimer) window.clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(() => {
+          setFlutterSpeed(flutterSlow);
+        }, 2200);
+      }
+
+      function rectCenter(el) {
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      }
+
+      function fireDroplets(count = 10) {
+        // 2a) Kelebekten Etki Alanı kartına damlacıklar fırlasın
+        const start = rectCenter(butterflyEl);
+        const end = rectCenter(impactCardEl);
+
+        for (let i = 0; i < count; i++) {
+          const d = document.createElement("div");
+          d.className = "droplet";
+
+          const jitterX = (Math.random() - 0.5) * 22;
+          const jitterY = (Math.random() - 0.5) * 18;
+          const dx = end.x - start.x + jitterX;
+          const dy = end.y - start.y + jitterY;
+
+          d.style.left = `${start.x}px`;
+          d.style.top = `${start.y}px`;
+          d.style.setProperty("--dx", `${dx}px`);
+          d.style.setProperty("--dy", `${dy}px`);
+          d.style.setProperty("--delay", `${i * 45}ms`);
+          d.style.width = `${8 + Math.random() * 6}px`;
+          d.style.height = `${10 + Math.random() * 8}px`;
+
+          particleLayerEl.appendChild(d);
+          d.addEventListener("animationend", () => d.remove());
+        }
+      }
+
+      function setWaterPercent(nextPercent) {
+        const clamped = Math.max(10, Math.min(95, nextPercent));
+        currentWaterPercent = clamped;
+        waterLevelEl.style.height = `${clamped}%`;
+        waterLabelEl.textContent = `Seviye: %${Math.round(clamped)}`;
+      }
+
+      function onAlternativeSelected(savedLiters = 12000) {
+        // 2) Alternatif seçimi: damlacıklar + su seviyesi artışı + metin güncellemesi
+        setFlutterSpeed(0.55);
+        fireDroplets(12);
+
+        // 2b) Su seviyesi yavaşça yükselsin
+        setWaterPercent(currentWaterPercent + 18);
+
+        // 2c) Metinler güncellensin
+        savedLitersEl.textContent = `${new Intl.NumberFormat("tr-TR").format(savedLiters)} Litre`;
+        impactedRegionEl.textContent = "Kenya - Amboseli Su Kuyusu (Simüle Edildi)";
+
+        // 3) Animasyon bitince tekrar yavaşla
+        if (resetTimer) window.clearTimeout(resetTimer);
+        resetTimer = window.setTimeout(() => {
+          setFlutterSpeed(flutterSlow);
+        }, 1700);
+      }
+
+      function toStressLevel(maxRisk) {
+        // Basit dönüştürme: good->Düşük, medium->Orta, bad/critical->Yüksek
+        if (maxRisk === "good") return "Düşük";
+        if (maxRisk === "medium") return "Orta";
+        return "Yüksek";
+      }
+
+      function maxRiskFromRegions(regions) {
+        const order = { good: 1, medium: 2, bad: 3, critical: 4 };
+        let max = "medium";
+        (regions || []).forEach((r) => {
+          if (order[r.risk] && order[r.risk] > order[max]) max = r.risk;
+        });
+        return max;
+      }
+
+      function setRiskPointer(status) {
+        // Risk cetveli pointer konumu (%): good 12, medium 42, bad 70, critical 92
+        const pos = { good: 12, medium: 42, bad: 70, critical: 92 }[status] ?? 42;
+        riskPointerEl.style.left = `${pos}%`;
+      }
+
+      function renderNarrative(product) {
+        const maxRisk = maxRiskFromRegions(product?.regions || []);
+        const stress = toStressLevel(maxRisk);
+        butterflyNarrativeEl.textContent =
+          `${product.name}, global su sıkıntısı verilerine göre su stresi ${stress} bir bölgede üretildi. ` +
+          `Bu bölgenin su dengesi kritik.`;
+      }
+
+      function renderWorldMap(product) {
+        // Üretim bölgesini ve ısı noktalarını "sanal veri" ile belirliyoruz.
+        // Ürün adından deterministik bir seçim yapalım.
+        const key = (product?.id || product?.name || "").toString();
+        let seed = 0;
+        for (let i = 0; i < key.length; i++) seed = (seed + key.charCodeAt(i) * (i + 1)) % 1000;
+        const options = [
+          { x: 245, y: 95, heat: [[320, 105, 18], [270, 120, 14], [420, 120, 16]] }, // Afro-Avrasya
+          { x: 120, y: 95, heat: [[150, 95, 16], [200, 120, 14], [330, 105, 18]] }, // Amerika->Avrasya
+          { x: 410, y: 95, heat: [[420, 120, 18], [330, 105, 14], [270, 120, 12]] }, // Doğu Asya
+          { x: 360, y: 165, heat: [[360, 165, 18], [420, 120, 14], [330, 105, 12]] }, // Okyanusya
+        ];
+        const pick = options[seed % options.length];
+
+        originDotEl.setAttribute("cx", String(pick.x));
+        originDotEl.setAttribute("cy", String(pick.y));
+
+        // Heat layer’ı güncelle
+        heatLayerEl.innerHTML = "";
+        pick.heat.forEach(([cx, cy, r], idx) => {
+          const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          c.setAttribute("class", "heat");
+          c.setAttribute("cx", String(cx));
+          c.setAttribute("cy", String(cy));
+          c.setAttribute("r", String(r));
+          c.setAttribute("opacity", String(0.45 - idx * 0.12));
+          heatLayerEl.appendChild(c);
+        });
+      }
+
+      function showResult(product) {
+        lastSeenProduct = product;
+        lastSeenLiters = Number(product.water_liters || 0);
+
+        resultTitleEl.textContent = product.name;
+        resultMetaEl.textContent = `Su ayak izi: ${new Intl.NumberFormat("tr-TR").format(Math.round(product.water_liters))} L • Birim: ${product.unit}`;
+        resultCardEl.classList.remove("hidden");
+
+        const status = product.status; // good/medium/critical vs (bad yok ama cetvelde var)
+        setRiskPointer(status === "critical" ? "critical" : status === "medium" ? "medium" : "good");
+
+        renderNarrative(product);
+        renderWorldMap(product);
+      }
+
+      async function searchProduct(q) {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        if (!res.ok) {
+          butterflyNarrativeEl.textContent = data?.message || "Ürün bulunamadı.";
+          resultCardEl.classList.add("hidden");
+          return;
+        }
+        showResult(data);
+        onSearchViewed();
+      }
+
+      // Demo butonları (bu sayfada arama/alternatif akışı olmadığı için)
+      mockSearchBtn?.addEventListener("click", onSearchViewed);
+      mockAlternativeBtn?.addEventListener("click", () => onAlternativeSelected(12000));
+
+      searchFormEl?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const q = queryInputEl.value.trim();
+        if (!q) return;
+        await searchProduct(q);
+      });
+
+      alternativeBtnEl?.addEventListener("click", () => {
+        // Backend alternatifi burada simüle ediyoruz: son görülen ürün 12.000 L'e düşmüş gibi düşünelim.
+        const saved = Math.max(0, (lastSeenLiters || 12000) - Math.max(1200, (lastSeenLiters || 12000) * 0.25));
+        onAlternativeSelected(saved);
+      });
+
+      // Entegrasyon kolaylığı: Dışarıdan event ile tetiklenebilir.
+      // Örn: window.dispatchEvent(new CustomEvent("butterfly:search"));
+      // Örn: window.dispatchEvent(new CustomEvent("butterfly:alternative", { detail: { savedLiters: 8000 } }));
+      window.addEventListener("butterfly:search", onSearchViewed);
+      window.addEventListener("butterfly:alternative", (e) => {
+        const savedLiters = Number(e?.detail?.savedLiters || 12000);
+        onAlternativeSelected(savedLiters);
+      });
+
+      // İlk durum
+      setFlutterSpeed(flutterSlow);
+      setWaterPercent(currentWaterPercent);
+    </script>
+  </body>
+</html>
+

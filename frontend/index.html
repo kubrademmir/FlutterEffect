@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>FlutterEffect — Small wings, big oceans.</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <style>
+      body {
+        background:
+          radial-gradient(circle at 15% 10%, rgba(34, 211, 238, 0.35) 0%, transparent 35%),
+          radial-gradient(circle at 80% 15%, rgba(16, 185, 129, 0.28) 0%, transparent 38%),
+          radial-gradient(circle at 60% 90%, rgba(59, 130, 246, 0.18) 0%, transparent 40%),
+          linear-gradient(135deg, rgba(240, 253, 250, 0.65), rgba(239, 246, 255, 0.65));
+      }
+      .glass {
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 14px 55px rgba(2, 6, 23, 0.12);
+      }
+      .glass-dark {
+        background: rgba(15, 23, 42, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        backdrop-filter: blur(14px);
+        box-shadow: 0 14px 55px rgba(2, 6, 23, 0.18);
+      }
+      .island {
+        transition: all 500ms ease;
+      }
+      .island-good {
+        background: linear-gradient(180deg, #14532d 0%, #166534 65%, #1f2937 100%);
+      }
+      .island-medium {
+        background: linear-gradient(180deg, #713f12 0%, #854d0e 60%, #1f2937 100%);
+      }
+      .island-bad {
+        background: linear-gradient(180deg, #7c2d12 0%, #9a3412 60%, #1f2937 100%);
+      }
+      .island-critical {
+        background: linear-gradient(180deg, #7f1d1d 0%, #991b1b 60%, #1f2937 100%);
+        filter: saturate(0.7);
+      }
+      #map {
+        min-height: 330px;
+        border-radius: 12px;
+      }
+      .toast-enter {
+        animation: toastIn 0.4s ease;
+      }
+      @keyframes toastIn {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .butterfly {
+        animation: flutter 1.6s ease-in-out infinite;
+        transform-origin: center;
+      }
+      @keyframes flutter {
+        0% { transform: translateY(0) rotate(-4deg) scale(1); }
+        40% { transform: translateY(-4px) rotate(6deg) scale(1.03); }
+        100% { transform: translateY(0) rotate(-4deg) scale(1); }
+      }
+    </style>
+  </head>
+  <body class="text-slate-900 min-h-screen">
+    <div class="max-w-7xl mx-auto p-4 md:p-8 space-y-4">
+      <nav class="glass rounded-2xl px-4 md:px-6 py-4 flex items-center justify-between sticky top-4 z-40">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-emerald-400 flex items-center justify-center shadow-lg shadow-cyan-500/20">
+            <span class="text-xl">🦋</span>
+          </div>
+          <div class="leading-tight">
+            <div class="text-lg font-bold text-slate-900">FlutterEffect</div>
+            <div class="text-xs text-slate-600">Small wings, big oceans.</div>
+          </div>
+        </div>
+
+        <div class="hidden md:flex items-center gap-4 text-sm">
+          <a href="#how" class="text-slate-700 hover:text-slate-900 transition">Nasıl Çalışır?</a>
+          <a href="#why" class="text-slate-700 hover:text-slate-900 transition">Neden Kelebek Etkisi?</a>
+        </div>
+      </nav>
+
+      <section class="glass rounded-3xl p-6 md:p-8" id="how">
+        <div class="max-w-3xl">
+          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/60 border border-slate-200 text-xs text-slate-700">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Global Water Heritage • Mock UI
+          </div>
+          <h1 class="mt-4 text-3xl md:text-5xl font-extrabold tracking-tight">
+            <span class="bg-gradient-to-r from-cyan-600 via-sky-600 to-emerald-600 bg-clip-text text-transparent">
+              Small wings, big oceans.
+            </span>
+          </h1>
+          <p class="mt-4 text-slate-700 leading-relaxed">
+            Senin küçük seçimlerin, dünyanın öbür ucundaki ekosistemleri canlandırıyor. Hadi, bugün bir kelebek etkisi yarat!
+          </p>
+        </div>
+      </section>
+
+      <div id="criticalZoneWarning" class="hidden glass rounded-xl p-4 border-red-400/60 bg-red-900/30">
+        <strong class="text-red-300">Kritik Bolge Uyarisi:</strong>
+        <span class="text-red-100">Su stresi yuksek bolge secildi. Kuruma etkisi 2x uygulaniyor.</span>
+      </div>
+
+      <div class="grid lg:grid-cols-3 gap-4">
+        <div class="lg:col-span-2 space-y-4">
+          <div class="glass rounded-3xl p-4">
+            <form id="searchForm" class="grid md:grid-cols-4 gap-3">
+              <input id="query" class="md:col-span-2 rounded-full bg-white/60 border border-slate-200 p-3 outline-none" placeholder='Orn: "1 kg dana eti", "kot pantolon"' />
+              <select id="zoneSelect" class="rounded-full bg-white/60 border border-slate-200 p-3"></select>
+              <button id="submitBtn" class="rounded-full bg-gradient-to-r from-emerald-500/80 to-cyan-500/80 text-white hover:from-emerald-500 hover:to-cyan-500 transition p-3 font-semibold shadow-lg shadow-emerald-500/20">Hesapla</button>
+            </form>
+          </div>
+
+          <div id="islandCard" class="glass rounded-3xl p-4">
+            <div class="flex justify-between items-center mb-3">
+              <h2 class="text-xl font-semibold">Kalici Ekosistem (Life Chronicle)</h2>
+              <span id="healthPill" class="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-700/20 text-slate-900">Saglik: %100</span>
+            </div>
+            <div id="island" class="island island-good rounded-xl h-48 p-4 flex items-end">
+              <div>
+                <p id="islandText" class="font-medium">Ada canli ve dengeli.</p>
+                <p id="islandSubText" class="text-sm text-slate-200/90">Tercihlerin kalici etki biriktirir.</p>
+              </div>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3 mt-3">
+              <div class="rounded-2xl bg-white/60 p-3 border border-slate-200">
+                Toplam Harcanan Su
+                <div id="spentCounter" class="text-xl font-bold mt-1">0 L</div>
+              </div>
+              <div class="rounded-2xl bg-white/60 p-3 border border-slate-200">
+                Toplam Kurtarilan Su
+                <div id="savedCounter" class="text-xl font-bold mt-1">0 L</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-dark rounded-3xl p-5 border border-cyan-200/20">
+            <h2 class="text-xl md:text-2xl font-semibold text-cyan-100">
+              Senin Seçimin, Dünyanın Öbür Ucunda Ne Değiştiriyor?
+            </h2>
+            <p class="text-slate-300 mt-2">
+              Kelebek Etkisi (Butterfly Effect)
+            </p>
+
+            <div class="grid md:grid-cols-2 gap-4 mt-4">
+              <div class="glass-dark rounded-3xl p-5 bg-emerald-900/10 border border-emerald-200/20 flex items-center justify-center">
+                <div class="text-center">
+                  <div class="text-5xl butterfly select-none">🦋</div>
+                  <div class="text-slate-200/90 mt-3 text-sm">
+                    Kucuk bir secim, buyuk bir dalga yaratabilir.
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass-dark rounded-3xl p-5 bg-cyan-900/10 border border-cyan-200/20">
+                <div class="flex items-center justify-between">
+                  <h3 class="text-lg font-semibold">Etki Alanı</h3>
+                  <span class="text-xs px-2 py-1 rounded-full border border-cyan-200/30 bg-cyan-500/10 text-cyan-100">
+                    Simülasyon
+                  </span>
+                </div>
+
+                <div class="mt-4 rounded-2xl border border-white/15 bg-black/20 overflow-hidden">
+                  <div class="px-4 py-3 text-sm text-slate-200/90 border-b border-white/10">
+                    Sanal Su Kuyusu / Göl
+                  </div>
+                  <div class="relative h-28">
+                    <div class="absolute inset-0 bg-gradient-to-b from-cyan-500/15 to-emerald-500/10"></div>
+                    <div class="absolute bottom-0 left-0 right-0 h-[45%] bg-gradient-to-t from-cyan-400/70 to-cyan-300/30"></div>
+                    <div class="absolute inset-0 pointer-events-none">
+                      <div class="absolute left-3 top-3 w-2 h-2 rounded-full bg-white/40"></div>
+                      <div class="absolute left-10 top-6 w-1.5 h-1.5 rounded-full bg-white/30"></div>
+                      <div class="absolute left-20 top-4 w-1 h-1 rounded-full bg-white/25"></div>
+                    </div>
+                    <div class="absolute bottom-2 right-3 text-xs text-cyan-50/90">
+                      Seviye: %45
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-1">
+                  <div class="text-slate-200/90">
+                    Tasarruf edilen su miktarı: <span class="font-semibold text-cyan-100">0 Litre</span>
+                  </div>
+                  <div class="text-slate-300 text-sm">
+                    Etkilenen Bölge: <span class="text-slate-200/90">Simüle Ediliyor...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="glass-dark rounded-3xl p-4">
+            <h2 class="text-xl font-semibold">Kuresel Etki Haritasi</h2>
+            <p id="impactText" class="text-slate-300 mt-1">Cevreci bir alternatif secince kelebek etkisi raporu burada gorunecek.</p>
+            <div class="grid md:grid-cols-[220px_1fr] gap-3 mt-3">
+              <div class="rounded-xl bg-black/20 border border-white/10 p-3">
+                <div class="font-semibold mb-2">Risk Skalasi</div>
+                <div class="space-y-2 text-sm">
+                  <div><span class="inline-block w-3 h-3 rounded-full bg-emerald-400 mr-2"></span>Iyi</div>
+                  <div><span class="inline-block w-3 h-3 rounded-full bg-yellow-300 mr-2"></span>Orta</div>
+                  <div><span class="inline-block w-3 h-3 rounded-full bg-orange-400 mr-2"></span>Kotu</div>
+                  <div><span class="inline-block w-3 h-3 rounded-full bg-red-500 mr-2"></span>Kritik</div>
+                </div>
+              </div>
+              <div id="map"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div id="result" class="glass-dark rounded-3xl p-4 hidden text-slate-100"></div>
+          <div id="insight" class="glass-dark rounded-3xl p-4 text-slate-100"></div>
+          <div id="alternatives" class="glass-dark rounded-3xl p-4 text-slate-100"></div>
+        </div>
+      </div>
+
+      <section class="glass rounded-3xl p-6 md:p-8" id="why">
+        <h2 class="text-lg font-semibold text-slate-900">Neden Kelebek Etkisi?</h2>
+        <p class="text-slate-700 mt-2 leading-relaxed">
+          Bir seçim; su ayak izi, üretim zinciri ve tüketim alışkanlıkları üzerinden zincirleme etki yaratır.
+          FlutterEffect bu bağlantıyı görselleştirerek, küçük adımların nasıl büyük okyanuslara dönüştüğünü hissettirir.
+        </p>
+      </section>
+    </div>
+
+    <div id="toastArea" class="fixed right-4 bottom-4 z-50 space-y-2"></div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script>
+      const STORAGE_KEY = "global-water-chronicle-v1";
+      const form = document.getElementById("searchForm");
+      const queryInput = document.getElementById("query");
+      const zoneSelect = document.getElementById("zoneSelect");
+      const submitBtn = document.getElementById("submitBtn");
+      const resultEl = document.getElementById("result");
+      const alternativesEl = document.getElementById("alternatives");
+      const insightEl = document.getElementById("insight");
+      const impactTextEl = document.getElementById("impactText");
+      const warningEl = document.getElementById("criticalZoneWarning");
+      const toastArea = document.getElementById("toastArea");
+      const islandEl = document.getElementById("island");
+      const islandTextEl = document.getElementById("islandText");
+      const islandSubTextEl = document.getElementById("islandSubText");
+      const healthPillEl = document.getElementById("healthPill");
+      const spentCounterEl = document.getElementById("spentCounter");
+      const savedCounterEl = document.getElementById("savedCounter");
+
+      let map = null;
+      let markerLayer = null;
+      let lastEffectiveLiters = null;
+      let chronicle = loadChronicle();
+      let zones = [];
+
+      function loadChronicle() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return { health: 100, spent: 0, saved: 0 };
+      }
+      function saveChronicle() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(chronicle));
+      }
+      function fmt(n) {
+        return new Intl.NumberFormat("tr-TR").format(Math.round(n));
+      }
+      function riskColor(risk) {
+        if (risk === "critical") return "#ef4444";
+        if (risk === "bad") return "#fb923c";
+        if (risk === "medium") return "#fde047";
+        return "#34d399";
+      }
+      function toast(message) {
+        const el = document.createElement("div");
+        el.className = "toast-enter glass rounded-xl px-4 py-3 max-w-sm";
+        el.innerHTML = `<div class="font-semibold">Dijital Kredi Bagisi</div><div class="text-sm text-slate-200 mt-1">${message}</div>`;
+        toastArea.appendChild(el);
+        setTimeout(() => el.remove(), 3200);
+      }
+
+      function applyIslandView() {
+        const h = chronicle.health;
+        islandEl.classList.remove("island-good", "island-medium", "island-bad", "island-critical");
+        let stage = "good";
+        if (h <= 20) stage = "critical";
+        else if (h <= 45) stage = "bad";
+        else if (h <= 70) stage = "medium";
+        islandEl.classList.add(`island-${stage}`);
+
+        const meta = {
+          good: ["Ada canli ve verimli.", "Yavas ama istikrarli bir iyilesme suruyor."],
+          medium: ["Ada kuruma sinirinda.", "Daha dusuk su ayak izli secimler adayi toparlar."],
+          bad: ["Ada belirgin sekilde coraklasiyor.", "Su tuketimi azaltilmazsa kritik seviyeye iner."],
+          critical: ["Ada kritik kuraklikta.", "Kalici hasari tersine cevirmek icin art arda cevre dostu secimler gerekli."]
+        }[stage];
+        islandTextEl.textContent = meta[0];
+        islandSubTextEl.textContent = meta[1];
+        healthPillEl.textContent = `Saglik: %${Math.max(0, Math.round(h))}`;
+        spentCounterEl.textContent = `${fmt(chronicle.spent)} L`;
+        savedCounterEl.textContent = `${fmt(chronicle.saved)} L`;
+      }
+
+      function initMap() {
+        if (map) return;
+        map = L.map("map", { worldCopyJump: true }).setView([20, 0], 2);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 7,
+          attribution: "&copy; OpenStreetMap"
+        }).addTo(map);
+        markerLayer = L.layerGroup().addTo(map);
+      }
+
+      function renderRegions(regions) {
+        initMap();
+        markerLayer.clearLayers();
+        const bounds = [];
+        (regions || []).forEach((r) => {
+          if (typeof r.lat !== "number" || typeof r.lng !== "number") return;
+          const c = riskColor(r.risk);
+          const m = L.circleMarker([r.lat, r.lng], {
+            radius: 8,
+            color: c,
+            fillColor: c,
+            fillOpacity: 0.8
+          });
+          m.bindPopup(`<strong>${r.name}</strong><br/>Risk: ${r.risk}`);
+          m.addTo(markerLayer);
+          bounds.push([r.lat, r.lng]);
+        });
+        if (bounds.length) map.fitBounds(bounds, { padding: [20, 20], maxZoom: 4 });
+      }
+
+      function updateChronicle(effectiveLiters, isAlternative) {
+        chronicle.spent += effectiveLiters;
+        const impact = Math.min(18, Math.max(1.5, effectiveLiters / 600));
+        if (isAlternative) {
+          chronicle.health = Math.min(100, chronicle.health + Math.max(1.2, impact * 0.35));
+        } else {
+          chronicle.health = Math.max(0, chronicle.health - impact);
+        }
+      }
+
+      async function loadZones() {
+        const res = await fetch("/api/production-zones");
+        const data = await res.json();
+        zones = data.zones || [];
+        zoneSelect.innerHTML = zones.map((z) => `<option value="${z.id}">${z.label}</option>`).join("");
+      }
+
+      function selectedZone() {
+        return zones.find((z) => z.id === zoneSelect.value) || zones[0] || { stress_multiplier: 1, stress_level: "low" };
+      }
+
+      function renderInsight(product) {
+        if (product.product_type === "clothing") {
+          const mats = (product.material_alternatives || []).join(", ") || "Alternatif yok";
+          insightEl.innerHTML = `
+            <h3 class="font-semibold text-lg">Materyal ve Alternatifler</h3>
+            <p class="text-slate-300 mt-2">Malzeme: ${product.material_info || "Bilgi yok"}</p>
+            <p class="text-slate-300 mt-2">Alternatif Malzemeler: ${mats}</p>
+          `;
+          return;
+        }
+        insightEl.innerHTML = `
+          <h3 class="font-semibold text-lg">Kalori ve Saglik Etkisi</h3>
+          <p class="text-slate-300 mt-2">Kalori: ${product.calories_per_unit ? fmt(product.calories_per_unit) + " kcal" : "-"}</p>
+          <p class="text-slate-300 mt-2">${product.health_note || "Saglik notu yok."}</p>
+        `;
+      }
+
+      function renderAlternatives(product, multiplier) {
+        const alts = product.alternatives || [];
+        if (!alts.length) {
+          alternativesEl.innerHTML = "<p class='text-slate-300'>Bu urun icin alternatif bulunamadi.</p>";
+          return;
+        }
+        alternativesEl.innerHTML = `
+          <h3 class="font-semibold text-lg">Dusuk Su Maliyetli Oneriler</h3>
+          <div class="space-y-2 mt-3">
+            ${alts.map((a) => `
+              <button data-alt="${a.name}" data-liters="${a.water_liters}" class="w-full text-left rounded-xl p-3 bg-white/5 border border-white/15 hover:bg-white/10 transition">
+                <div class="flex items-center justify-between gap-2">
+                  <div>
+                    <div class="font-medium">${a.name}</div>
+                    <div class="text-sm text-slate-300">${fmt(a.water_liters)} L</div>
+                  </div>
+                  <span class="text-xs px-2 py-1 rounded-full border border-emerald-300/50 bg-emerald-500/20">Sponsor Marka: DogaDostu</span>
+                </div>
+              </button>
+            `).join("")}
+          </div>
+        `;
+        alternativesEl.querySelectorAll("button[data-alt]").forEach((btn) => {
+          btn.addEventListener("click", async () => {
+            const altName = btn.dataset.alt;
+            const altL = Number(btn.dataset.liters || 0) * multiplier;
+            if (lastEffectiveLiters && lastEffectiveLiters > altL) {
+              const saved = lastEffectiveLiters - altL;
+              chronicle.saved += saved;
+              const impactRes = await fetch(`/api/impact-transfer?saved_liters=${encodeURIComponent(saved)}`);
+              const impact = await impactRes.json();
+              impactTextEl.textContent = `Tebrikler! Kurtardiginiz ${fmt(saved)} litre su, ${impact.region} bolgesine sanal olarak aktarildi. ${impact.message}`;
+            }
+            toast("Bu seciminiz sayesinde X nehrinin temizlenmesine 1 Dijital Kredi bagislandi.");
+            await runSearch(altName, true);
+          });
+        });
+      }
+
+      async function runSearch(query, isAlternative = false) {
+        submitBtn.disabled = true;
+        try {
+          const zone = selectedZone();
+          const multiplier = Number(zone.stress_multiplier || 1);
+          warningEl.classList.toggle("hidden", zone.stress_level !== "high");
+
+          const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+          const data = await res.json();
+          if (!res.ok) {
+            resultEl.classList.remove("hidden");
+            resultEl.innerHTML = `<div class="text-red-300">${data.message || "Urun bulunamadi."}</div>`;
+            return;
+          }
+
+          const effectiveLiters = data.water_liters * multiplier;
+          updateChronicle(effectiveLiters, isAlternative);
+          saveChronicle();
+          applyIslandView();
+          lastEffectiveLiters = effectiveLiters;
+
+          resultEl.classList.remove("hidden");
+          resultEl.innerHTML = `
+            <h3 class="text-xl font-semibold">${data.name}</h3>
+            <p class="text-slate-300 mt-1">Taban Su Ayak Izi: ${fmt(data.water_liters)} L</p>
+            <p class="text-slate-300">Bolge Carpani: x${multiplier.toFixed(1)} (${zone.label})</p>
+            <p class="text-cyan-300 font-semibold mt-1">Etkilesimli Maliyet: ${fmt(effectiveLiters)} L</p>
+          `;
+
+          renderInsight(data);
+          renderRegions(data.regions || []);
+          renderAlternatives(data, multiplier);
+        } catch (e) {
+          resultEl.classList.remove("hidden");
+          resultEl.innerHTML = "<div class='text-red-300'>Aglanti hatasi olustu.</div>";
+        } finally {
+          submitBtn.disabled = false;
+        }
+      }
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const q = queryInput.value.trim();
+        if (!q) return;
+        await runSearch(q, false);
+      });
+
+      (async function init() {
+        applyIslandView();
+        await loadZones();
+        initMap();
+      })();
+    </script>
+  </body>
+</html>
