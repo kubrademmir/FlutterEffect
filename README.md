@@ -4,9 +4,9 @@
 
 **Nasıl Çalıştırılır?** Bu proje Netlify üzerinde statik web sitesi olarak yayınlanmıştır. Arka planda Gemini AI entegrasyonu JS üzerinden doğrudan sağlanmaktadır. Aşağıdaki canlı yayın linkine tıklayarak hemen test edebilirsiniz:
 
-🔗 **Canlı Yayın Linki:** [Buraya Netlify linkini yapıştır, örn: https://euphonious...netlify.app]
+🔗 **Canlı Yayın Linki:** https://fluttereffect.netlify.app/
 
-🎥 **Demo Videosu:** [Buraya çektiğin YouTube veya Loom video linkini yapıştır]
+🎥 **Demo Videosu:** https://www.loom.com/share/72ac21e5f3c841b1ad069b6189c1c8a8
 
 ---
 
